@@ -1,0 +1,28 @@
+# Intentional vulnerable dependency versions for Endor Labs Agent Kit testing
+
+# FastAPI & ASGI ecosystem
+fastapi==0.88.0
+starlette==0.27.0          # CVE-2023-30798 (ReDoS / DoS via multipart form data)
+python-multipart==0.0.6    # CVE-2024-24762 (DoS with catastrophic resource consumption)
+uvicorn==0.20.0
+
+# Database & Data validation
+sqlalchemy==1.4.46
+pydantic==1.10.2           # Pydantic v1 legacy with known issues
+email-validator==1.3.1
+sqlparse==0.4.3            # CVE-2023-30608, CVE-2024-4340 (ReDoS / Recursion depth exhaustion)
+
+# Authentication & Cryptography
+python-jose[cryptography]==3.3.0
+ecdsa==0.13.3              # CVE-2019-14853 (Side-channel timing attack on ECDSA signatures)
+cryptography==39.0.1       # CVE-2023-23931, CVE-2023-38325, CVE-2023-49083 (NULL dereference & memory corruption)
+passlib[bcrypt]==1.7.4
+
+# Networking & HTTP
+requests==2.25.1           # CVE-2023-32681 (Leaking Proxy-Authorization header on redirects)
+urllib3==1.26.5            # CVE-2021-33503, CVE-2023-43804, CVE-2023-45803 (Cookie leaks, ReDoS)
+certifi==2022.12.07        # CVE-2023-37920 (Revoked e-Tugra root certificate)
+
+# Template Engine & Parsing
+jinja2==3.1.2              # CVE-2024-22195, CVE-2024-34064 (HTML attribute injection / XSS)
+pyyaml==5.3.1              # CVE-2020-14343 (Arbitrary code execution via untrusted YAML load)
