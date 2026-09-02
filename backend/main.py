@@ -265,8 +265,11 @@ def tokenize_and_save_card(
             exp_year=card_data.exp_year,
             cvv=card_data.cvv
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid payment card details provided. Please verify card number, expiry, and CVV."
+        )
         
     # Check if this should be default (if first card, make default automatically)
     existing_cards_count = db.query(models.PaymentMethod).filter(models.PaymentMethod.user_id == current_user.id).count()
@@ -355,7 +358,7 @@ def delete_payment_method(
 
 
 # ----------------------------------------------------
-# Tools & Importers (Contains intentional SAST targets for AI SAST triage)
+# Tools & Importers (Remediated with Secure Implementation)
 # ----------------------------------------------------
 
 @app.get("/api/signatures/search-raw")
@@ -364,46 +367,63 @@ def search_signatures_raw(
     db: Session = Depends(get_db)
 ):
     """
-    Search signatures with raw SQL query.
-    Vulnerability: SQL Injection (CWE-89) - Unsanitized user query string concatenated directly into SQL statement.
+    Search signatures safely using SQLAlchemy ORM parameterized queries.
+    Remediation for CWE-89 (SQL Injection): Parameterized query binding prevents injection attacks.
     """
-    raw_query = f"SELECT id, full_name, company, job_title, email FROM signatures WHERE full_name LIKE '%{query}%' OR company = '{query}'"
-    result = db.execute(raw_query)
-    rows = [dict(row) for row in result]
+    signatures = db.query(models.Signature).filter(
+        (models.Signature.full_name.ilike(f"%{query}%")) | 
+        (models.Signature.company.ilike(f"%{query}%"))
+    ).all()
+    rows = [
+        {"id": s.id, "full_name": s.full_name, "company": s.company, "job_title": s.job_title, "email": s.email}
+        for s in signatures
+    ]
     return {"query": query, "count": len(rows), "results": rows}
 
 
 @app.post("/api/tools/fetch-remote-template")
 def fetch_remote_template(url: str):
     """
-    Fetch remote email signature HTML template via shell curl.
-    Vulnerability: Command Injection (CWE-78) - User input passed directly into shell=True subprocess execution.
+    Fetch remote email signature HTML template via secure HTTP client.
+    Remediation for CWE-78 (Command Injection): Eliminated shell subprocess; uses safe HTTP client.
     """
-    import subprocess
-    cmd = f"curl -s --max-time 5 {url}"
-    output = subprocess.check_output(cmd, shell=True, text=True)
-    return {"status": "success", "content": output}
+    import httpx
+    if not (url.startswith("http://") or url.startswith("https://")):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid URL protocol. Only HTTP/HTTPS supported.")
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(url)
+            return {"status": "success", "content": response.text}
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to fetch remote template")
 
 
 @app.post("/api/signatures/import-yaml-theme")
 def import_yaml_theme(theme_payload: str):
     """
-    Import custom signature styling theme encoded in YAML.
-    Vulnerability: Insecure Deserialization (CWE-502) - Untrusted YAML deserialized using unsafe Loader.
+    Import custom signature styling theme encoded in YAML safely.
+    Remediation for CWE-502 (Insecure Deserialization): Enforced safe_load() to prevent arbitrary code execution.
     """
     import yaml
-    data = yaml.load(theme_payload, Loader=yaml.Loader)
-    return {"status": "imported", "theme": data}
+    try:
+        data = yaml.safe_load(theme_payload)
+        return {"status": "imported", "theme": data}
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed or invalid YAML payload")
 
 
 @app.get("/api/tools/read-template-asset")
 def read_template_asset(filename: str):
     """
-    Read static template asset or config file.
-    Vulnerability: Path Traversal (CWE-22) - Unsanitized filename allows directory traversal via '../'.
+    Read static template asset safely.
+    Remediation for CWE-22 (Path Traversal): os.path.basename strips directory navigation paths.
     """
-    target_path = os.path.join(STATIC_DIR, filename)
+    safe_filename = os.path.basename(filename)
+    target_path = os.path.join(STATIC_DIR, safe_filename)
+    if not os.path.exists(target_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Requested asset not found")
     with open(target_path, "r", errors="ignore") as f:
         file_content = f.read()
-    return {"filename": filename, "content": file_content}
+    return {"filename": safe_filename, "content": file_content}
+
 
