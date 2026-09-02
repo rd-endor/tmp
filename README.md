@@ -1,6 +1,6 @@
 # ✉️ Email Signature Studio
 
-A full-stack email signature generator featuring a **Node.js (React + Vite + Tailwind CSS)** frontend, a **Python (FastAPI + SQLite)** backend, user authentication, live multi-template rendering, and 1-click rich-text export for Gmail, Apple Mail, and Outlook.
+A full-stack email signature generator featuring a **Node.js (React + Vite + Tailwind CSS)** frontend, a **Python (FastAPI + SQLite)** backend, user authentication, credit card tokenization & vault, live multi-template rendering, and 1-click rich-text export for Gmail, Apple Mail, and Outlook.
 
 ---
 
@@ -12,8 +12,13 @@ A full-stack email signature generator featuring a **Node.js (React + Vite + Tai
   - *Minimalist Clean*: Text-focused, clean typography for everyday emails.
   - *Branded Card*: Framed card format with header logo and call-to-action button.
   - *Compact Pro*: Single-line compact style optimized for mobile reply chains.
-- **🔐 User Authentication**:
+- **🔐 User Authentication & Strong Passwords**:
   - Username & password sign-up and sign-in with PBKDF2 cryptographic hashing and JWT session tokens.
+  - Enforced strong password policy (8+ chars, uppercase, lowercase, numbers, special characters) with real-time UI strength meter.
+- **💳 Credit Card Tokenization & Vault**:
+  - PCI DSS-compliant tokenization vault (`tok_<brand>_<hash>`).
+  - Card number Luhn algorithm validation & brand detection (Visa, Mastercard, Amex, Discover).
+  - Safe masked storage (only token, brand, expiry, and `last4` are stored).
 - **💾 Cloud/Database Persistence**:
   - Save, edit, duplicate, browse, and delete custom signatures backed by **SQLite** via SQLAlchemy.
 - **🖼️ Logo & Branding Integration**:
@@ -33,29 +38,32 @@ A full-stack email signature generator featuring a **Node.js (React + Vite + Tai
 ```text
 .
 ├── backend/
+│   ├── Dockerfile           # Backend container definition
 │   ├── auth.py              # PBKDF2 password hashing & JWT token handling
 │   ├── database.py          # SQLite engine & session setup
 │   ├── main.py              # FastAPI app, CORS, routes & static mounts
-│   ├── models.py            # SQLAlchemy models (User, Signature)
+│   ├── models.py            # SQLAlchemy models (User, Signature, PaymentMethod)
 │   ├── requirements.txt     # Python backend dependencies
-│   ├── schemas.py           # Pydantic request/response models
+│   ├── schemas.py           # Pydantic request/response models & password rules
 │   ├── static/              # Served static files (logos & user uploads)
-│   │   ├── logos/           # Pre-loaded logo assets
-│   │   └── uploads/         # User uploaded images
-│   └── test_api.py          # Automated API test suite
+│   ├── test_api.py          # Automated API test suite
+│   └── tokenization.py      # Luhn check, card brand detector & token vault
 ├── frontend/
+│   ├── Dockerfile           # Multi-stage frontend container (Node build -> Nginx)
+│   ├── nginx.conf           # Nginx reverse proxy configuration
 │   ├── index.html           # HTML entry point
 │   ├── package.json         # Node.js dependencies (React, Vite, Tailwind)
 │   ├── vite.config.js       # Vite configuration with API proxy
 │   └── src/
-│       ├── api/             # Axios API client
-│       ├── components/      # UI components (Header, Modals, Builder, Preview)
+│       ├── api/             # Axios API client (Auth, Signatures, Payments, Logos)
+│       ├── components/      # UI components (Header, BillingModal, Auth, Preview)
 │       ├── context/         # AuthContext state management
 │       ├── templates/       # Bulletproof HTML signature generators
 │       └── types/           # Template definitions & color palettes
+├── docker-compose.yml       # Multi-container orchestration (Backend + Frontend)
 ├── endor-labs-logo-2.png     # Logo asset
 ├── endor-labs-logo-ss.png    # Square/Compact logo asset
-├── start.sh                 # One-click start script for both services
+├── start.sh                 # One-click start script for local dev
 └── README.md
 ```
 
@@ -63,9 +71,22 @@ A full-stack email signature generator featuring a **Node.js (React + Vite + Tai
 
 ## 🚀 Quick Start
 
-### 1. Launch with `start.sh` (Recommended)
+### 1. Docker Compose (Recommended for Containers)
 
-Run the convenient start script to spin up both backend and frontend concurrently:
+Spin up both containerized services with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend Application**: [http://localhost:3000](http://localhost:3000)
+- **Backend API & Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### 2. Launch with `start.sh` (Local Development)
+
+Run the convenient local start script:
 
 ```bash
 ./start.sh
@@ -76,7 +97,7 @@ Run the convenient start script to spin up both backend and frontend concurrentl
 
 ---
 
-### 2. Manual Setup & Running
+### 3. Manual Setup & Running
 
 #### Backend (Python + FastAPI + SQLite)
 
