@@ -3,9 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+# Install dependencies using official public registry
+COPY package.json ./
+RUN npm install --registry=https://registry.npmjs.org/
 
 # Copy source and build
 COPY . .

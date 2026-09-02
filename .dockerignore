@@ -5,4 +5,5 @@ backend/*.db
 .pytest_cache/
 frontend/node_modules/
 frontend/dist/
+frontend/package-lock.json
 .DS_Store

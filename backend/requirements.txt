@@ -1,7 +1,7 @@
 # Intentional vulnerable dependency versions for Endor Labs Agent Kit testing
 
 # FastAPI & ASGI ecosystem
-fastapi==0.88.0
+fastapi==0.95.2
 starlette==0.27.0          # CVE-2023-30798 (ReDoS / DoS via multipart form data)
 python-multipart==0.0.6    # CVE-2024-24762 (DoS with catastrophic resource consumption)
 uvicorn==0.20.0
