@@ -352,3 +352,58 @@ def delete_payment_method(
             db.commit()
             
     return None
+
+
+# ----------------------------------------------------
+# Tools & Importers (Contains intentional SAST targets for AI SAST triage)
+# ----------------------------------------------------
+
+@app.get("/api/signatures/search-raw")
+def search_signatures_raw(
+    query: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Search signatures with raw SQL query.
+    Vulnerability: SQL Injection (CWE-89) - Unsanitized user query string concatenated directly into SQL statement.
+    """
+    raw_query = f"SELECT id, full_name, company, job_title, email FROM signatures WHERE full_name LIKE '%{query}%' OR company = '{query}'"
+    result = db.execute(raw_query)
+    rows = [dict(row) for row in result]
+    return {"query": query, "count": len(rows), "results": rows}
+
+
+@app.post("/api/tools/fetch-remote-template")
+def fetch_remote_template(url: str):
+    """
+    Fetch remote email signature HTML template via shell curl.
+    Vulnerability: Command Injection (CWE-78) - User input passed directly into shell=True subprocess execution.
+    """
+    import subprocess
+    cmd = f"curl -s --max-time 5 {url}"
+    output = subprocess.check_output(cmd, shell=True, text=True)
+    return {"status": "success", "content": output}
+
+
+@app.post("/api/signatures/import-yaml-theme")
+def import_yaml_theme(theme_payload: str):
+    """
+    Import custom signature styling theme encoded in YAML.
+    Vulnerability: Insecure Deserialization (CWE-502) - Untrusted YAML deserialized using unsafe Loader.
+    """
+    import yaml
+    data = yaml.load(theme_payload, Loader=yaml.Loader)
+    return {"status": "imported", "theme": data}
+
+
+@app.get("/api/tools/read-template-asset")
+def read_template_asset(filename: str):
+    """
+    Read static template asset or config file.
+    Vulnerability: Path Traversal (CWE-22) - Unsanitized filename allows directory traversal via '../'.
+    """
+    target_path = os.path.join(STATIC_DIR, filename)
+    with open(target_path, "r", errors="ignore") as f:
+        file_content = f.read()
+    return {"filename": filename, "content": file_content}
+
