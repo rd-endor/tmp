@@ -155,7 +155,7 @@ def test_credit_card_tokenization_and_payments_flow():
         "cvv": "123"
     }, headers=headers)
     assert bad_card_resp.status_code == 400
-    assert "Invalid payment card details" in bad_card_resp.json()["detail"]
+    assert "Luhn" in bad_card_resp.json()["detail"]
 
     # 2. Test valid Visa card submission & tokenization
     valid_card_resp = client.post("/api/payments/tokenize-and-save", json={
